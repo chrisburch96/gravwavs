@@ -1,44 +1,101 @@
+/*
+		GRAVITATIONAL WAVES DATA GENERATION GROUP
+		
+				NOISE GENERATION ROUTINE
+*/
+
 #include <iostream>
 #include <cmath>
 #include <stdlib.h>
 #include <fstream>
 #include <iomanip>
+#include <vector>
+#include <string>
 
 #define C_PI 3.1415926536
 
 using namespace std;
 
-void sigDriver( double (*generator)(), double sigLength, int samples);
-double noiseGenGaussian();
+struct Signal{ //Struct to throw signals around
+	
+	int len; //Number of samples
+	vector<double> time; //Vector of times
+	vector<double> amplitude; //Amplitude of sample
+	
+};
+
+Signal sigDriver( double (*generator)(), Signal sig); //adds noise to signal
+double noiseGenGaussian(); //Returns a single sample of gaussian noise
+Signal readSigFile(string filename); //Reads csv file into signal
+int writeSigFile(string filename, Signal sig); //Writes signal to csv
 
 int main(){
 	
-	sigDriver(noiseGenGaussian, 100, 1000);
+	string filename;
+	cout<<"enter file name \n";
+	cin >> filename;
+	
+	Signal sig = readSigFile(filename);
+	
+	Signal nSig = sigDriver(noiseGenGaussian, sig);
+	
+	writeSigFile("noisy_sig.csv", nSig);
 	
 	return 0;
 	
 }
 
-void sigDriver( double (*generator)(), double sigLength, int samples){
-
-	double t=0;
-	double dt = sigLength/samples;
-	double time[samples];
-	double amp[samples];
+Signal readSigFile(string filename){ //Reads signal from a csv file (but doesn't)
 	
-	ofstream sigFile;
-	sigFile.open("signal.csv");
+	Signal sig;
+	ifstream sigFile(filename.c_str());
+	int index=0;
+	
+	string line;
+	
+	while(sigFile.good()){
+		
+		getline(sigFile, line,',');
+		sig.time[index] = atof(line);
+		
+		getline(sigFile, line);
+		sig.amplitude[index] = atof(line);
+		
+		index += 1;
+		
+	}
+	
+	sig.len = index;
+	
+	return sig;
+	
+}
+
+int writeSigFile(string filename, Signal sig){
+	
+	ofstream outFile;
+	outFile.open(filename.c_str());
+	
+	for(int i=0, i<sig.len, i++){
+		
+		outFile<<sig.time[i]<<","<<sig.amplitude[i]<<"\n";
+		
+	}
+	
+	outFile.close();
+	
+	return 0;
+	
+}
+
+Signal sigDriver( double (*generator)(), Signal sig){ //Takes a noise generator and applies it to each value in the signal
+
+	int samples = sig.len; //Number of samples
 	
 	for(int i = 0; i<samples; i++){
 		
-		amp[i] += (*generator)();
-		
-		time[i] = t;
-		
-		t+=dt;
-		
-		sigFile<<time[i]<<","<<amp[i]<<"\n";
-		
+		sig.amplitude[i] += (*generator)();
+
 	}
 
 }
